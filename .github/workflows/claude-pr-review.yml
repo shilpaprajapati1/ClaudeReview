@@ -27,6 +27,23 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
+      - name: Read CLAUDE.md coding standards
+        id: coding_standards
+        run: |
+          if [ -f "CLAUDE.md" ]; then
+            # Read file and encode to base64 to safely pass multiline content as an env var
+            CONTENT=$(cat CLAUDE.md)
+            echo "found=true" >> $GITHUB_OUTPUT
+            # Use a heredoc delimiter to safely handle multiline markdown
+            EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+            echo "content<<$EOF" >> $GITHUB_OUTPUT
+            echo "$CONTENT" >> $GITHUB_OUTPUT
+            echo "$EOF" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "content=No CLAUDE.md found." >> $GITHUB_OUTPUT
+          fi
+
       - name: Run Claude PR Review
         uses: anthropics/claude-code-action@v1
         with:
@@ -39,6 +56,16 @@ jobs:
             PR Number: ${{ github.event.pull_request.number }}
             PR Title: ${{ github.event.pull_request.title }}
             Author: ${{ github.event.pull_request.user.login }}
+
+            ---
+            ## Project Coding Standards (from CLAUDE.md)
+
+            The following standards are defined for this repository.
+            **Every finding in your review must be checked against these standards.**
+
+            ${{ steps.coding_standards.outputs.content }}
+
+            ---
 
             Focus your review on:
             1. **Code Quality** - Best practices, clean code principles, readability, and maintainability

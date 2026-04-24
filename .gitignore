@@ -1,0 +1,19 @@
+## .NET Build Artifacts
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+
+## NuGet Packages
+*.nupkg
+**/packages/
+
+## IDE Files
+.idea/
+.vscode/
+*.swp
+
+## OS Files
+.DS_Store
+Thumbs.db

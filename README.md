@@ -26,6 +26,7 @@ When a pull request is submitted (or updated) targeting the `main` branch, the *
    - Performance considerations
    - .NET / Blazor-specific patterns
    - Testing & documentation gaps
+4. Automatically submits a **Request Changes** review, **blocking the merge** until a maintainer approves
 
 ## Setup
 
@@ -38,7 +39,31 @@ Add your Anthropic API key as a repository secret:
 3. Name: `ANTHROPIC_API_KEY`
 4. Value: your Anthropic API key (get one at https://console.anthropic.com)
 
-### 2. Create a working branch and open a PR
+### 2. Disable GitHub Copilot Code Review (use Claude only)
+
+To ensure only Claude performs code review (not GitHub Copilot):
+
+1. Go to **Settings → Code review** (requires repository admin access)
+2. Under **Copilot code review**, toggle it **off**
+
+> This ensures all automated review feedback comes exclusively from Claude.
+
+### 3. Require the Claude review as a status check (enforce merge blocking)
+
+To enforce that the Claude review must pass before merging:
+
+1. Go to **Settings → Branches**
+2. Click **Add branch protection rule** (or edit the existing rule for `main`)
+3. Enable **Require a pull request before merging**
+4. Enable **Require approvals** (set to 1 or more)
+5. Under **Require status checks to pass before merging**, add `Claude Code Review`
+6. Save the rule
+
+With this in place, every PR to `main` is blocked until:
+- Claude has completed its review and posted its findings
+- A maintainer reviews Claude's comments and approves the PR
+
+### 4. Create a working branch and open a PR
 
 ```bash
 git checkout -b feature/my-feature

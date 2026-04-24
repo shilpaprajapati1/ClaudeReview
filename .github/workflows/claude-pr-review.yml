@@ -19,6 +19,8 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
+    # GitHub Copilot code review must be disabled separately in:
+    # Repository Settings → Code review → Copilot Code Review → toggle off
 
     steps:
       - name: Checkout repository
@@ -80,3 +82,18 @@ jobs:
             Provide actionable feedback with specific code suggestions where applicable.
             Use inline comments on changed lines when possible.
             Summarize your overall findings at the end with a clear recommendation (Approve / Request Changes / Comment).
+
+      - name: Block merge until review is addressed
+        # Always requests changes so every PR is blocked until a maintainer
+        # explicitly approves after reviewing Claude's findings.
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              event: 'REQUEST_CHANGES',
+              body: '🤖 **Claude automated code review completed.**\n\nAll inline comments and findings from Claude have been posted above.\nPlease address every comment before this PR can be merged.\n\nOnce all issues are resolved, a maintainer can approve this PR to unblock the merge.',
+            });

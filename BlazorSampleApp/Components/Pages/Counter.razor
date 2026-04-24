@@ -7,8 +7,21 @@
 
 <p role="status">Current count: @currentCount</p>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<div class="mb-3">
+    <label class="form-label">Step size: @Step</label>
+    <input type="range" class="form-range" min="1" max="10" @bind="Step" />
+</div>
+
+<button class="btn btn-primary" @onclick="IncrementCount">+ Increment</button>
+<button class="btn btn-warning ms-2" @onclick="DecrementCount" disabled="@(currentCount <= 0)">− Decrement</button>
 <button class="btn btn-secondary ms-2" @onclick="ResetCount">Reset</button>
+
+@if (currentCount >= 10)
+{
+    <div class="alert alert-success mt-3" role="alert">
+        🎉 You've reached @currentCount! Keep going!
+    </div>
+}
 
 @code {
     private int currentCount = 0;
@@ -19,6 +32,11 @@
     private void IncrementCount()
     {
         currentCount += Step;
+    }
+
+    private void DecrementCount()
+    {
+        currentCount = Math.Max(0, currentCount - Step);
     }
 
     private void ResetCount()

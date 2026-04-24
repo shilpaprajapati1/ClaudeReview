@@ -1,0 +1,79 @@
+@page "/todo"
+@rendermode InteractiveServer
+
+<PageTitle>Todo</PageTitle>
+
+<h1>Todo <span class="badge bg-secondary">@todos.Count(t => !t.IsDone) remaining</span></h1>
+
+<div class="input-group mb-3">
+    <input class="form-control" placeholder="Add a new task…" @bind="newTodo" @bind:event="oninput"
+           @onkeydown="@(e => { if (e.Key == "Enter") AddTodo(); })" />
+    <button class="btn btn-primary" @onclick="AddTodo" disabled="@(string.IsNullOrWhiteSpace(newTodo))">Add</button>
+</div>
+
+<div class="mb-2 d-flex gap-2">
+    <button class="btn btn-sm btn-outline-secondary" @onclick="() => filter = Filter.All">All</button>
+    <button class="btn btn-sm btn-outline-success" @onclick="() => filter = Filter.Active">Active</button>
+    <button class="btn btn-sm btn-outline-primary" @onclick="() => filter = Filter.Completed">Completed</button>
+    <button class="btn btn-sm btn-outline-danger ms-auto" @onclick="ClearCompleted"
+            disabled="@(!todos.Any(t => t.IsDone))">Clear completed</button>
+</div>
+
+<ul class="list-group">
+    @foreach (var todo in FilteredTodos)
+    {
+        <li class="list-group-item d-flex align-items-center gap-2">
+            <input type="checkbox" class="form-check-input" checked="@todo.IsDone"
+                   @onchange="() => todo.IsDone = !todo.IsDone" />
+            <span class="@(todo.IsDone ? "text-decoration-line-through text-muted" : "")">@todo.Title</span>
+            <button class="btn btn-sm btn-outline-danger ms-auto" @onclick="() => todos.Remove(todo)">✕</button>
+        </li>
+    }
+</ul>
+
+@if (!todos.Any())
+{
+    <p class="text-muted mt-3"><em>No tasks yet. Add one above!</em></p>
+}
+
+@code {
+    private string newTodo = string.Empty;
+    private Filter filter = Filter.All;
+
+    private List<TodoItem> todos = new()
+    {
+        new TodoItem { Title = "Review the Blazor sample app" },
+        new TodoItem { Title = "Set up Claude PR review workflow" },
+        new TodoItem { Title = "Open a pull request", IsDone = true }
+    };
+
+    private IEnumerable<TodoItem> FilteredTodos => filter switch
+    {
+        Filter.Active    => todos.Where(t => !t.IsDone),
+        Filter.Completed => todos.Where(t => t.IsDone),
+        _                => todos
+    };
+
+    private void AddTodo()
+    {
+        var title = newTodo.Trim();
+        if (!string.IsNullOrEmpty(title))
+        {
+            todos.Add(new TodoItem { Title = title });
+            newTodo = string.Empty;
+        }
+    }
+
+    private void ClearCompleted()
+    {
+        todos.RemoveAll(t => t.IsDone);
+    }
+
+    private class TodoItem
+    {
+        public string Title { get; set; } = string.Empty;
+        public bool IsDone { get; set; }
+    }
+
+    private enum Filter { All, Active, Completed }
+}

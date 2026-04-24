@@ -74,3 +74,5 @@ Open https://localhost:5001 in your browser.
 - An Anthropic API key for the Claude PR review workflow
 
 > **Note:** This PR was created to verify the Claude automated review workflow triggers correctly on new pull requests.
+
+> **Update:** Minor change added to re-trigger the Claude PR review workflow.

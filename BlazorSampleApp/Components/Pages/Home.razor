@@ -1,7 +1,102 @@
 ﻿@page "/"
+@rendermode InteractiveServer
+@using BlazorSampleApp.Models
+@using BlazorSampleApp.Services
+@inject UserService UserService
+@inject NavigationManager Nav
 
 <PageTitle>Home</PageTitle>
 
 <h1>Hello, world!</h1>
+<p>Welcome to your test app.</p>
 
-Welcome to your new app.
+<hr />
+
+<h3>Login</h3>
+
+<input type="text" @bind="username" placeholder="Username" />
+<input type="text" @bind="password" placeholder="Password" /> @* password in plaintext input *@
+<button class="btn btn-primary" @onclick="DoLogin">Login</button>
+
+@if (!string.IsNullOrEmpty(loginMessage))
+{
+    <p>@loginMessage</p>
+}
+
+<hr />
+
+<h3>Quick Product Lookup</h3>
+
+<input type="number" @bind="productId" placeholder="Enter Product ID" />
+<button class="btn btn-secondary" @onclick="LookupProduct">Find</button>
+
+@if (foundProduct != null)
+{
+    <div>
+        <p>Name: @foundProduct.Name</p>
+        <p>Price: @foundProduct.Price</p>
+        <p>Stock: @foundProduct.Stock</p>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p style="color:red">@errorMessage</p>
+}
+
+<hr />
+
+<h3>All Products (@allProducts.Count)</h3>
+
+@* Calling service directly in markup on every render *@
+@foreach (var p in UserService.GetProducts())
+{
+    <p>[@p.Id] @p.Name - $@p.Price</p>
+}
+
+@code {
+    private string username = "";
+    private string password = "";    // storing password in component state
+    private string loginMessage = "";
+    private string errorMessage = "";
+    private int productId;
+    private Product foundProduct;
+    private List<Product> allProducts = new List<Product>(); // never updated after init
+
+    protected override void OnInitialized()
+    {
+        // Sync over async, blocking call
+        allProducts = UserService.GetProducts();
+    }
+
+    private void DoLogin()
+    {
+        // No input sanitization, no async, direct plaintext comparison via service
+        bool result = UserService.Login(username, password);
+        if (result)
+        {
+            loginMessage = "Login successful! Welcome, " + username + "!"; // string concat instead of interpolation
+            password = ""; // too late to clear - already sent
+            Nav.NavigateTo("/user/" + username); // no encoding on URL segment
+        }
+        else
+        {
+            loginMessage = "Invalid credentials."; // same message for all failure reasons (user enumeration risk)
+        }
+    }
+
+    private void LookupProduct()
+    {
+        try
+        {
+            // Will throw KeyNotFoundException if not found, instead of TryGetValue
+            foundProduct = UserService.GetProductById(productId);
+            errorMessage = "";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error: " + ex.Message; // exposing raw exception message to UI
+            foundProduct = null;
+        }
+    }
+}

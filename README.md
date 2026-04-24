@@ -72,3 +72,5 @@ Open https://localhost:5001 in your browser.
 
 - .NET 10 SDK or later
 - An Anthropic API key for the Claude PR review workflow
+
+> **Note:** This PR was created to verify the Claude automated review workflow triggers correctly on new pull requests.

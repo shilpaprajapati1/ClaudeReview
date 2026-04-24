@@ -1,0 +1,55 @@
+name: Claude PR Review
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+jobs:
+  claude-review:
+    name: Claude Code Review
+    runs-on: ubuntu-latest
+    # Skip draft PRs
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Run Claude PR Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            Please perform a thorough code review for this pull request targeting the main branch.
+
+            Repository: ${{ github.repository }}
+            PR Number: ${{ github.event.pull_request.number }}
+            PR Title: ${{ github.event.pull_request.title }}
+            Author: ${{ github.event.pull_request.user.login }}
+
+            Focus your review on:
+            1. **Code Quality** - Best practices, clean code principles, readability, and maintainability
+            2. **Correctness** - Logic errors, edge cases, potential bugs
+            3. **Security** - Vulnerabilities, unsafe patterns, input validation issues
+            4. **Performance** - Inefficiencies, resource usage, unnecessary operations
+            5. **Architecture** - Design patterns, separation of concerns, component structure
+            6. **.NET / Blazor Specifics** - Proper use of Blazor lifecycle methods, component patterns, dependency injection, async patterns
+            7. **Testing** - Missing tests, untestable code
+            8. **Documentation** - Missing or inadequate comments/XML docs
+
+            Provide actionable feedback with specific code suggestions where applicable.
+            Use inline comments on changed lines when possible.
+            Summarize your overall findings at the end with a clear recommendation (Approve / Request Changes / Comment).

@@ -9,6 +9,8 @@ builder.Services.AddRazorComponents()
 
 // Registered as Singleton - but holds per-user/request state (should be Scoped or Transient)
 builder.Services.AddSingleton<UserService>();
+// OrderService also registered as Singleton despite holding mutable shared state
+builder.Services.AddSingleton<OrderService>();
 
 var app = builder.Build();
 

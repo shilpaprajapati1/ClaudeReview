@@ -1,0 +1,100 @@
+@page "/inventory"
+@rendermode InteractiveServer
+@using BlazorSampleApp.Models
+@using BlazorSampleApp.Services
+@inject InventoryService InventoryService
+
+<PageTitle>Inventory</PageTitle>
+
+<h1>Inventory Management</h1>
+
+@* Service call directly in markup block - should be in OnInitializedAsync *@
+@{
+    var stock = InventoryService.GetAllStock();
+    var totalValue = InventoryService.GetTotalInventoryValue();
+}
+
+<p>Total Inventory Value: $@totalValue</p>  @* double displayed raw, no formatting *@
+
+@if (stock.Count == 0)
+{
+    <p>No items in inventory.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Stock</th>
+                <th>Price</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in InventoryService.GetAllStock()) @* service called again inside loop *@
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.Name</td>
+                    <td>@item.Stock</td>
+                    <td>$@item.Price</td>
+                    <td>
+                        @* No confirmation before deducting *@
+                        <button class="btn btn-warning" @onclick="() => Deduct(item.Id, 1)">Deduct 1</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<hr />
+<h3>Add Sample Stock</h3>
+<button class="btn btn-success" @onclick="AddSample">Add Sample Item</button>
+<button class="btn btn-info ms-2" @onclick="GenerateReport">Generate Report</button>
+
+@if (!string.IsNullOrEmpty(report))
+{
+    <pre>@report</pre>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p style="color:red">@errorMessage</p>
+}
+
+@code {
+    private List<Product> products; // never initialized via lifecycle - null risk
+    private string report = "";
+    private string errorMessage = "";
+
+    // No OnInitializedAsync - data loaded inline in markup above
+
+    private void Deduct(int productId, int qty)
+    {
+        // No loading state, no async, no error display on false return
+        var success = InventoryService.DeductStock(productId, qty);
+        // success ignored - no UI feedback on failure
+    }
+
+    private void AddSample()
+    {
+        // Magic values, object initializer style inconsistent with rest of codebase
+        var p = new Product();
+        p.Id = 42;        // hardcoded magic id - will conflict if called twice
+        p.Name = "Test Item";
+        p.Price = 19.99;  // double, not decimal
+        p.Stock = 100;
+        p.Category = "Test";
+        p.CreatedAt = DateTime.Now; // should be UtcNow
+        InventoryService.AddStock(p, 100);
+    }
+
+    private void GenerateReport()
+    {
+        // Sync call, no error handling, result dumped to UI without sanitization
+        report = InventoryService.GenerateStockReport();
+    }
+}

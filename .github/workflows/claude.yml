@@ -2,34 +2,24 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-    
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
+      issues: write
       id-token: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Run Claude Code Review
         id: claude-review
@@ -40,44 +30,116 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
+            You are a senior .NET/Blazor code reviewer. Perform a thorough review of this pull request against the standards below. For every issue found, provide:
+            1. The exact file and line number
+            2. What the problem is
+            3. A concrete code fix (show the corrected snippet)
 
-            Be constructive and helpful in your feedback.
+            ---
 
-          # Optional: Supply CLI flags for models, max turns, system prompts, tool access, etc.
-          # claude_args: |
-          #   --model claude-4-0-sonnet-20250805
-          #   --allowedTools Bash(npm run test),Bash(npm run lint),Bash(npm run typecheck)
+            ## CODING STANDARDS CHECKLIST
 
-          # Optional: Use sticky comments to make Claude reuse the same comment on subsequent pushes to the same PR
-          # use_sticky_comment: true
-          
-          # Optional: Customize review based on file types
-          # prompt: |
-          #   REPO: ${{ github.repository }}
-          #   PR NUMBER: ${{ github.event.pull_request.number }}
-          #
-          #   Review this PR focusing on:
-          #   - For TypeScript files: Type safety and proper interface usage
-          #   - For API endpoints: Security, input validation, and error handling
-          #   - For React components: Performance, accessibility, and best practices
-          #   - For tests: Coverage, edge cases, and test quality
-          
-          # Optional: Different prompts for different authors
-          # prompt: |
-          #   REPO: ${{ github.repository }}
-          #   PR NUMBER: ${{ github.event.pull_request.number }}
-          #
-          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' && 
-          #   'Welcome! Please review this PR from a first-time contributor. Be encouraging and provide detailed explanations for any suggestions.' ||
-          #   'Please provide a thorough code review focusing on our coding standards and best practices.' }}
-          
-          # Optional: Skip review for certain conditions
-          # if: |
-          #   !contains(github.event.pull_request.title, '[skip-review]') &&
-          #   !contains(github.event.pull_request.title, '[WIP]')
+            ### 1. C# Language & Style
+            - [ ] All class members use **properties** (`{ get; set; }`) not public fields
+            - [ ] Naming: PascalCase for types/methods/properties, camelCase for locals/params, `_camelCase` for private fields
+            - [ ] No magic numbers or magic strings — use named constants or enums
+            - [ ] No string concatenation in loops — use `StringBuilder` or interpolation
+            - [ ] Use `decimal` for currency/financial values, not `double` or `float`
+            - [ ] Use `DateTime.UtcNow` instead of `DateTime.Now` for stored timestamps
+            - [ ] Prefer LINQ over manual `for`/`foreach` loops when readable
+            - [ ] Remove unused fields, variables, and dead code
+            - [ ] No TODO comments left in submitted code
+
+            ### 2. Null Safety & Error Handling
+            - [ ] Nullable reference types respected — no `!` suppression without justification
+            - [ ] All method parameters validated at public API boundaries (guard clauses)
+            - [ ] No silent swallowing of exceptions — log or rethrow
+            - [ ] Methods that can fail return `Result<T>`/`bool` or throw typed exceptions, not silently return nothing
+            - [ ] Dictionary lookups use `TryGetValue`, not direct indexer (avoids `KeyNotFoundException`)
+
+            ### 3. Async / Threading
+            - [ ] No `.Result` or `.Wait()` on `Task` — always `await`
+            - [ ] No `Task.Run(() => ...).Result` inside Blazor lifecycle methods
+            - [ ] Async methods named with `Async` suffix and return `Task`/`Task<T>`
+            - [ ] `CancellationToken` passed through where applicable
+            - [ ] Shared mutable state (`static List<>`, `static Dictionary<>`) protected by locks or replaced with concurrent collections
+
+            ### 4. Security
+            - [ ] No hardcoded credentials, API keys, or secrets in source code
+            - [ ] No plaintext password comparison — use hashed comparison (e.g., BCrypt / ASP.NET Identity)
+            - [ ] All external HTTP calls use HTTPS, not HTTP
+            - [ ] No hardcoded internal URLs exposed to the client
+            - [ ] User-supplied route parameters validated before use (e.g., `[Parameter] string Username`)
+            - [ ] No privilege/authorization logic duplicated across components — centralize in a service/policy
+            - [ ] No direct exposure of internal collections to callers (return copies or `IReadOnlyList<T>`)
+
+            ### 5. Dependency Injection & HttpClient
+            - [ ] `HttpClient` created via `IHttpClientFactory`, not `new HttpClient()` directly
+            - [ ] Services registered with the correct lifetime (Singleton/Scoped/Transient) — Singleton services must be thread-safe
+            - [ ] No `new` for services inside constructors; depend on injected abstractions
+
+            ### 6. Blazor Patterns
+            - [ ] Data loading happens in `OnInitializedAsync`, not inline markup blocks or `OnInitialized`
+            - [ ] No service calls made directly inside the render loop (`@foreach` / `@{ }` blocks)
+            - [ ] Loading and error states shown in the UI during async operations
+            - [ ] Destructive actions (delete, cancel) require a confirmation step before executing
+            - [ ] `StateHasChanged()` called only when necessary and documented why
+            - [ ] No hardcoded navigation URLs — use named routes or `NavigationManager` with relative paths
+            - [ ] `@bind` used correctly; avoid mixing `@bind` and manual `@oninput`/`@onchange`
+
+            ### 7. Performance
+            - [ ] No N+1 query patterns — batch data fetching where possible
+            - [ ] Large lists use virtualization (`<Virtualize>`) or pagination
+            - [ ] `StringBuilder` used for string building in loops
+            - [ ] Manual JSON string construction replaced with `System.Text.Json` serialization
+
+            ### 8. Logging & Observability
+            - [ ] `Console.WriteLine` replaced with `ILogger<T>` at appropriate log levels
+            - [ ] Structured logging used (no string interpolation inside `LogXxx` calls)
+
+            ### 9. Model Design
+            - [ ] Models use properties, not public fields
+            - [ ] Currency fields typed as `decimal`
+            - [ ] No unused/leftover fields in models
+            - [ ] Consistent naming conventions (no mixed casing styles within a class)
+            - [ ] Data annotation attributes applied where validation is needed
+
+            ---
+
+            ## OUTPUT FORMAT
+
+            Post a **single PR comment** structured as:
+
+            ### Claude Review Summary
+            Brief 2-3 sentence overall assessment.
+
+            ### Issues Found
+
+            For each issue:
+            ```
+            **[SEVERITY]** `File:Line` — Short description
+
+            Problem: ...
+
+            Suggested fix:
+            ```csharp
+            // corrected code here
+            ```
+            ```
+
+            Severity levels: 🔴 Critical (security/data loss) | 🟠 Major (correctness/async bug) | 🟡 Minor (style/performance) | 🔵 Info (suggestion)
+
+            ### Summary Table
+            | Severity | Count |
+            |----------|-------|
+            | 🔴 Critical | N |
+            | 🟠 Major | N |
+            | 🟡 Minor | N |
+            | 🔵 Info | N |
+
+            ### Recommendation
+            **APPROVE** / **REQUEST CHANGES** / **NEEDS DISCUSSION** — one sentence reason.
+
+          claude_args: |
+            --model claude-sonnet-4-6
+            --allowedTools Bash(grep),Bash(find),Bash(cat)

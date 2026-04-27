@@ -11,6 +11,8 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSingleton<UserService>();
 // OrderService also registered as Singleton despite holding mutable shared state
 builder.Services.AddSingleton<OrderService>();
+// InventoryService registered as Singleton despite holding mutable static state - not thread-safe
+builder.Services.AddSingleton<InventoryService>();
 
 var app = builder.Build();
 

@@ -1,0 +1,88 @@
+@page "/orders"
+@rendermode InteractiveServer
+@using BlazorSampleApp.Models
+@using BlazorSampleApp.Services
+@inject OrderService OrderService
+@inject UserService UserService
+@inject NavigationManager Nav
+
+<PageTitle>My Orders</PageTitle>
+
+<h1>My Orders</h1>
+
+@* Hardcoded username - no real auth context *@
+@{
+    var currentUser = "admin";
+    var orders = OrderService.GetOrdersForUser(currentUser); // service call in markup block
+}
+
+@if (orders.Count == 0)
+{
+    <p>No orders yet.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Summary</th>
+                <th>Total</th>
+                <th>Placed At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var o in orders)
+            {
+                <tr>
+                    <td>@o.Id</td>
+                    <td>@o.Summary</td>
+                    <td>$@o.Total</td>  @* double displayed as currency, no formatting *@
+                    <td>@o.PlacedAt</td> @* no date formatting *@
+                    <td>
+                        @* No confirmation dialog before cancellation *@
+                        <button class="btn btn-danger" @onclick="() => Cancel(o.Id)">Cancel</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<hr />
+
+<h3>Place a Test Order</h3>
+<button class="btn btn-success" @onclick="PlaceSampleOrder">Place Sample Order</button>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <p>@message</p>
+}
+
+@code {
+    private string message = "";
+
+    // No lifecycle hook - all data fetched inline in markup block above
+
+    private void Cancel(int orderId)
+    {
+        // No confirmation, no async, no error handling
+        OrderService.CancelOrder(orderId);
+        message = "Order " + orderId + " cancelled."; // no StateHasChanged call needed but pattern is fragile
+    }
+
+    private void PlaceSampleOrder()
+    {
+        // Hardcoded sample data, magic values
+        var items = new List<Product>
+        {
+            new Product { Id = 1, Name = "Widget", Price = 29.99, Category = "General", Stock = 5 },
+            new Product { Id = 2, Name = "Gadget", Price = 49.99, Category = "General", Stock = 3 }
+        };
+
+        // No async, no loading indicator
+        var order = OrderService.PlaceOrder("admin", items);
+        message = "Order placed! ID: " + order.Id + ", Total: $" + order.Total; // string concat
+    }
+}

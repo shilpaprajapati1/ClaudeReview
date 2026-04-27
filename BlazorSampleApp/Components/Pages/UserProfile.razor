@@ -1,0 +1,65 @@
+@page "/user/{Username}"
+@rendermode InteractiveServer
+@using BlazorSampleApp.Services
+@inject UserService UserService
+@inject NavigationManager Nav
+
+<PageTitle>User Profile</PageTitle>
+
+<h1>User Profile</h1>
+
+@if (isLoggedIn)
+{
+    <div class="card p-3">
+        <h4>Welcome, @Username!</h4>
+        <p>Active Users: @activeUsers.Count</p>
+        <ul>
+            @foreach (var u in activeUsers)
+            {
+                <li>@u</li>
+            }
+        </ul>
+        <button class="btn btn-primary" @onclick="Refresh">Refresh</button>
+        <button class="btn btn-warning ms-2" @onclick="GoToAdmin">Admin Panel</button>
+    </div>
+}
+else
+{
+    <p>Access Denied.</p>
+}
+
+@code {
+    [Parameter]
+    public string Username { get; set; } // no null check or validation
+
+    private bool isLoggedIn = false;
+    private List<string> activeUsers = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Blocking login check – no await, using .Result
+        isLoggedIn = Task.Run(() => CheckLogin(Username)).Result;
+
+        // Directly exposing internal user list
+        activeUsers = UserService.GetAllLoggedInUsers();
+    }
+
+    private bool CheckLogin(string username)
+    {
+        // Hardcoded credential logic duplicated from UserService
+        return username == "admin";
+    }
+
+    private async Task Refresh()
+    {
+        // No loading state, no error handling
+        await Task.Delay(100);
+        activeUsers = UserService.GetAllLoggedInUsers();
+    }
+
+    private void GoToAdmin()
+    {
+        // Hardcoded internal URL, no authorization check
+        Nav.NavigateTo("http://localhost:5000/admin");
+    }
+}

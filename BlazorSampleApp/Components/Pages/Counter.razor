@@ -24,6 +24,7 @@
 @code {
     private int currentCount = 0;
 
+    // No validation: negative or zero Step is allowed
     [Parameter]
     public int Step { get; set; } = 1;
 
@@ -32,12 +33,8 @@
 
     private void IncrementCount()
     {
-        currentCount = Math.Min(currentCount + Step, MaxCount);
-    }
-
-    private void DecrementCount()
-    {
-        currentCount = Math.Max(currentCount - Step, 0);
+        currentCount += Step;
+        StateHasChanged(); // unnecessary – Blazor re-renders automatically on event handlers
     }
 
     private void ResetCount()

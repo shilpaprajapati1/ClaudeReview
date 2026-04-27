@@ -1,0 +1,79 @@
+@page "/notes"
+@rendermode InteractiveServer
+
+<PageTitle>Notes</PageTitle>
+
+<h1>Notes</h1>
+
+<div class="mb-3">
+    <input class="form-control" placeholder="Enter a note..." @bind="newNoteText" @onkeydown="HandleKeyDown" />
+</div>
+<button class="btn btn-primary" @onclick="AddNote" disabled="@string.IsNullOrWhiteSpace(newNoteText)">Add Note</button>
+
+@if (notes.Count > 0)
+{
+    <ul class="list-group mt-3">
+        @foreach (var note in notes)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span class="@(note.IsPinned ? "fw-bold" : "")">@note.Text</span>
+                <div>
+                    <button class="btn btn-sm btn-outline-warning me-1" @onclick="() => TogglePin(note)" title="@(note.IsPinned ? "Unpin" : "Pin")">
+                        @(note.IsPinned ? "📌" : "📍")
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveNote(note)">✕</button>
+                </div>
+            </li>
+        }
+    </ul>
+
+    <button class="btn btn-outline-secondary mt-2" @onclick="ClearAll">Clear All</button>
+}
+else
+{
+    <p class="text-muted mt-3">No notes yet. Add one above!</p>
+}
+
+@code {
+    private string newNoteText = string.Empty;
+    private List<Note> notes = new();
+
+    private void AddNote()
+    {
+        if (!string.IsNullOrWhiteSpace(newNoteText))
+        {
+            notes.Insert(0, new Note { Text = newNoteText.Trim() });
+            newNoteText = string.Empty;
+        }
+    }
+
+    private void RemoveNote(Note note)
+    {
+        notes.Remove(note);
+    }
+
+    private void TogglePin(Note note)
+    {
+        note.IsPinned = !note.IsPinned;
+        notes = notes.OrderByDescending(n => n.IsPinned).ToList();
+    }
+
+    private void ClearAll()
+    {
+        notes.Clear();
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddNote();
+        }
+    }
+
+    private class Note
+    {
+        public string Text { get; set; } = string.Empty;
+        public bool IsPinned { get; set; }
+    }
+}
